@@ -79,7 +79,7 @@ namespace EloSystem
                     calculateAndApplyEloChanges();
                     matchResults gameResults = new matchResults(mapChoice.mapName, team1.player1, team1.player2, team1.player3, team1.player4, team2.player1, team2.player2, team2.player3, team2.player4
                         , team1Wins, team2Wins, DateTime.Now);
-                    commitMatchResult(gameResults);
+                    commitMatchResult(gameResults, true);
                     correctAns = false;
                 }
                 else if (answer.ToUpper() == "T")
@@ -87,6 +87,10 @@ namespace EloSystem
                     grabPlayers();
                     makeTeams();
                     correctAns = false;
+                }
+                else if(answer.ToUpper() == "P")
+                {
+                    inputDataFromTextFile();
                 }
                 else
                 {
@@ -291,14 +295,42 @@ namespace EloSystem
 
             if (team1B) 
             {
-                eloChange = dp * player.volatility * (Math.Abs((team1Wins - expectedMapWinsTeam1)) /(2 * mapChoice.maps));
+                eloChange = dp * player.volatility * expectedScoreForElo(calculatedExpectedScore, true);
             }
             else
             {
-                eloChange = dp * player.volatility * (Math.Abs(team2Wins - expectedMapWinsTeam2) / (2 * mapChoice.maps));
+                eloChange = dp * player.volatility * expectedScoreForElo(1 - calculatedExpectedScore, false);
             }
 
             return eloChange;
+        }
+
+        static double expectedScoreForElo(double expectedScore,bool team1)
+        {
+            //If your score is over 160% then flat value of 
+            //Or under 40%
+            if(team1)
+            {
+                if(((team1Wins/mapChoice.maps)/expectedScore < 0.4) || ((team1Wins / mapChoice.maps) / expectedScore > 1.6))  
+                {
+                    return Math.Abs(0.04 * Math.Pow(((0.6 * expectedScore) * mapChoice.maps), 2) + 0.03);
+                }
+                else
+                {
+                    return Math.Abs(0.04 * Math.Pow(team1Wins - (expectedScore * mapChoice.maps), 2) + 0.03);
+                }
+            }
+            else
+            {
+                if (((team2Wins / mapChoice.maps) / expectedScore < 0.4) || ((team2Wins / mapChoice.maps) / expectedScore > 1.6))
+                {
+                    return Math.Abs(0.04 * Math.Pow(((0.6 * expectedScore) * mapChoice.maps), 2) + 0.03);
+                }
+                else
+                {
+                    return Math.Abs(0.04 * Math.Pow(team2Wins - (expectedScore * mapChoice.maps), 2) + 0.03);
+                }
+            }
         }
 
         static double calculateExpectedScore(team team1, team team2)
@@ -369,7 +401,7 @@ namespace EloSystem
                 cmd.ExecuteNonQuery();
             }
         }
-        static void commitMatchResult(matchResults matchResultsToCommit)
+        static void commitMatchResult(matchResults matchResultsToCommit, bool printToPrevMatches)
         {
             using (SqlConnection eloCon = new SqlConnection(conStr))
             {
@@ -383,6 +415,18 @@ namespace EloSystem
                 SqlCommand cmd = new SqlCommand(queryStr, eloCon);
                 cmd.ExecuteNonQuery();
             }
+
+            if (printToPrevMatches)
+            {
+                File.AppendAllText(@"K:\\Elo\\EloSystem\\EloSystem\\PrevMatches.txt", Environment.NewLine + mapChoice.mapName + "," + team1.player1.playerName + "," + team1.player2.playerName + "," +
+                    team1.player3.playerName + "," + team1.player4.playerName + "," +
+                    team2.player1.playerName + "," + team1.player2.playerName + "," +
+                    team2.player3.playerName + "," + team1.player4.playerName + "," +
+                    Convert.ToString(team1Wins) + "," + Convert.ToString(team2Wins)
+                );
+            }
+
+
         }
 
         
@@ -549,7 +593,7 @@ namespace EloSystem
                 calculateAndApplyEloChanges();
                 matchResults gameResults = new matchResults(mapChoice.mapName, team1.player1, team1.player2, team1.player3, team1.player4, team2.player1, team2.player2, team2.player3, team2.player4
                     , team1Wins, team2Wins, DateTime.Now);
-                commitMatchResult(gameResults);
+                commitMatchResult(gameResults,true);
 
                 team1Wins = 0;
                 team2Wins = 0;
@@ -763,6 +807,62 @@ namespace EloSystem
                 }
             }
         }
+
+        static void inputDataFromTextFile()
+        {
+            string[] prevMatchs = System.IO.File.ReadAllLines(@"K:\\Elo\\EloSystem\\EloSystem\\PrevMatches.txt");
+
+            for(int t = 0; t < prevMatchs.Length; t++)
+            {
+                heldPlayerStats = new List<playerStats>();
+                matchResultsPrev = new List<matchResults>();
+                playersInGame = new playerStats[8];
+                playersInGameL = new List<playerStats>();
+                grabPlayerStats();
+                grabPreviousMatchStats();
+
+
+                string[] subs = prevMatchs[t].Split(',');
+                mapChoice = heldMaps.Find(x => x.mapName.ToUpper() == subs[0].ToUpper());
+                team1.player1 = heldPlayerStats.Find(x => x.playerName == subs[1]);
+                playersInGameL.Add(team1.player1);
+                team1.player2 = heldPlayerStats.Find(x => x.playerName == subs[2]);
+                playersInGameL.Add(team1.player2);
+                team1.player3 = heldPlayerStats.Find(x => x.playerName == subs[3]);
+                playersInGameL.Add(team1.player3);
+                team1.player4 = heldPlayerStats.Find(x => x.playerName == subs[4]);
+                playersInGameL.Add(team1.player4);
+                team2.player1 = heldPlayerStats.Find(x => x.playerName == subs[5]);
+                playersInGameL.Add(team2.player1);
+                team2.player2 = heldPlayerStats.Find(x => x.playerName == subs[6]);
+                playersInGameL.Add(team2.player2);
+                team2.player3 = heldPlayerStats.Find(x => x.playerName == subs[7]);
+                playersInGameL.Add(team2.player3);
+                team2.player4 = heldPlayerStats.Find(x => x.playerName == subs[8]);
+                playersInGameL.Add(team2.player4);
+                calcPlayerStats();
+                team1Wins = Convert.ToDouble(subs[9]);
+                team2Wins = Convert.ToDouble(subs[10]);
+                draws = Convert.ToInt32(Math.Abs(team1Wins - team2Wins));
+                calculateAndApplyEloChanges();
+                matchResults gameResults = new matchResults(mapChoice.mapName, team1.player1, team1.player2, team1.player3, team1.player4, team2.player1, team2.player2, team2.player3, team2.player4
+                    , team1Wins, team2Wins, DateTime.Now);
+                commitMatchResult(gameResults, false);
+
+            }
+
+        }
+
+
+
+
+
+
+
+
+
+
+
 
         /*
         public static  (team, team) teamCreation(List<playerStats> players)
