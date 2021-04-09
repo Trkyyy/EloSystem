@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.IO;
 
+
 namespace EloSystem
 {
     class Program
@@ -71,11 +72,8 @@ namespace EloSystem
                     Console.WriteLine("Please enter the rounds drawn, between 0 - " + Convert.ToString(mapChoice.maps - team1Wins) + ": ");
                     draws = Convert.ToInt32(Console.ReadLine());
                     team2Wins = mapChoice.maps - team1Wins - draws;
-                    for (int t = 0; t < draws; t++)
-                    {
-                        team1Wins = team1Wins + 0.5;
-                        team2Wins = team2Wins + 0.5;
-                    }
+                    team1Wins = team1Wins + draws / 2;
+                    team2Wins = team2Wins + draws / 2;
                     calculateAndApplyEloChanges();
                     matchResults gameResults = new matchResults(mapChoice.mapName, team1.player1, team1.player2, team1.player3, team1.player4, team2.player1, team2.player2, team2.player3, team2.player4
                         , team1Wins, team2Wins, DateTime.Now);
@@ -313,22 +311,26 @@ namespace EloSystem
             {
                 if(((team1Wins/mapChoice.maps)/expectedScore < 0.4) || ((team1Wins / mapChoice.maps) / expectedScore > 1.6))  
                 {
-                    return Math.Abs(0.04 * Math.Pow(((0.6 * expectedScore) * mapChoice.maps), 2) + 0.03);
+                    //return Math.Abs(0.04 * Math.Pow(((0.6 * expectedScore) * mapChoice.maps), 2) + 0.03);
+                    return Math.Abs(0.02 * Math.Pow(((0.6 * expectedScore) * mapChoice.maps), 2) + 0.075);
                 }
                 else
                 {
-                    return Math.Abs(0.04 * Math.Pow(team1Wins - (expectedScore * mapChoice.maps), 2) + 0.03);
+                    //return Math.Abs(0.04 * Math.Pow(team1Wins - (expectedScore * mapChoice.maps), 2) + 0.075);
+                    return Math.Abs(0.02 * Math.Pow(team1Wins - (expectedScore * mapChoice.maps), 2) + 0.075);
                 }
             }
             else
             {
                 if (((team2Wins / mapChoice.maps) / expectedScore < 0.4) || ((team2Wins / mapChoice.maps) / expectedScore > 1.6))
                 {
-                    return Math.Abs(0.04 * Math.Pow(((0.6 * expectedScore) * mapChoice.maps), 2) + 0.03);
+                    //return Math.Abs(0.04 * Math.Pow(((0.6 * expectedScore) * mapChoice.maps), 2) + 0.075);
+                    return Math.Abs(0.02 * Math.Pow(((0.6 * (1 - expectedScore)) * mapChoice.maps), 2) + 0.075);
                 }
                 else
                 {
-                    return Math.Abs(0.04 * Math.Pow(team2Wins - (expectedScore * mapChoice.maps), 2) + 0.03);
+                    //return Math.Abs(0.04 * Math.Pow(team2Wins - (expectedScore * mapChoice.maps), 2) + 0.03);
+                    return Math.Abs(0.02 * Math.Pow(team2Wins - (expectedScore * mapChoice.maps), 2) + 0.075);
                 }
             }
         }
@@ -365,6 +367,15 @@ namespace EloSystem
             applyEloChange(player6EloChange, team2.player2);
             applyEloChange(player7EloChange, team2.player3);
             applyEloChange(player8EloChange, team2.player4);
+            addToPlayerMaps(team1.player1, team1Wins, team2Wins);
+            addToPlayerMaps(team1.player2, team1Wins, team2Wins);
+            addToPlayerMaps(team1.player3, team1Wins, team2Wins);
+            addToPlayerMaps(team1.player4, team1Wins, team2Wins);
+            addToPlayerMaps(team2.player1, team2Wins, team1Wins);
+            addToPlayerMaps(team2.player2, team2Wins, team1Wins);
+            addToPlayerMaps(team2.player3, team2Wins, team1Wins);
+            addToPlayerMaps(team2.player4, team2Wins, team1Wins);
+
 
             File.AppendAllText( @"K:\\Elo\\EloSystem\\EloSystem\\logs.txt", team1.player1.playerName + "Change = " + Convert.ToString(player1EloChange) + ", " +
                     team1.player2.playerName + "Change = " + Convert.ToString(player2EloChange) + ", " +
@@ -414,6 +425,9 @@ namespace EloSystem
                     team2.player4.playerName + "')";
                 SqlCommand cmd = new SqlCommand(queryStr, eloCon);
                 cmd.ExecuteNonQuery();
+
+                
+
             }
 
             if (printToPrevMatches)
@@ -427,6 +441,42 @@ namespace EloSystem
             }
 
 
+        }
+
+        static void addToPlayerMaps(playerStats player, double wins, double losses)
+        {
+            using (SqlConnection eloCon = new SqlConnection(conStr))
+            {
+                string queryStr = String.Format("Select * FROM Player_Maps WHERE MapId = '{0}' AND PlayerId = '{1}'", mapChoice.mapName, player.playerName);
+                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
+                eloCon.Open();
+                using (SqlDataReader oReader = cmd.ExecuteReader())
+                {
+                    if (oReader.HasRows)
+                    {
+                        while (oReader.Read())
+                        {
+                            using (SqlConnection eloCon2 = new SqlConnection(conStr))
+                            {
+                                eloCon2.Open();
+                                queryStr = String.Format("UPDATE Player_Maps SET Wins = {0}, Losses = {1} WHERE MapId = '{2}' AND PlayerId = '{3}'", Convert.ToString(Convert.ToDouble(oReader[1]) + wins), Convert.ToString(Convert.ToDouble(oReader[2]) + losses), mapChoice.mapName, player.playerName);
+                                SqlCommand cmd2 = new SqlCommand(queryStr, eloCon2);
+                                cmd2.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                    else
+                    {
+                        using (SqlConnection eloCon2 = new SqlConnection(conStr))
+                        {
+                            eloCon2.Open();
+                            queryStr = String.Format("INSERT INTO Player_Maps(Wins,Losses,MapId,PlayerId) VALUES ({0},{1},'{2}','{3}')", Convert.ToString(wins), Convert.ToString(losses), mapChoice.mapName, player.playerName);
+                            SqlCommand cmd2 = new SqlCommand(queryStr, eloCon2);
+                            cmd2.ExecuteNonQuery();
+                        }
+                    }
+                }
+            }
         }
 
         
@@ -810,6 +860,33 @@ namespace EloSystem
 
         static void inputDataFromTextFile()
         {
+            using (SqlConnection eloCon = new SqlConnection(conStr))
+            {
+                eloCon.Open();
+                string queryStr = "DELETE FROM MatchResults";
+                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
+                cmd.ExecuteNonQuery();
+                eloCon.Close();
+            }
+            using (SqlConnection eloCon = new SqlConnection(conStr))
+            {
+                eloCon.Open();
+                string queryStr = "UPDATE PlayerStats SET PlayerElo = 1000";
+                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
+                cmd.ExecuteNonQuery();
+                eloCon.Close();
+            }
+            using (SqlConnection eloCon = new SqlConnection(conStr))
+            {
+                eloCon.Open();
+                string queryStr = "DELETE FROM Player_Maps";
+                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
+                cmd.ExecuteNonQuery();
+                eloCon.Close();
+            }
+
+
+
             string[] prevMatchs = System.IO.File.ReadAllLines(@"K:\\Elo\\EloSystem\\EloSystem\\PrevMatches.txt");
 
             for(int t = 0; t < prevMatchs.Length; t++)
