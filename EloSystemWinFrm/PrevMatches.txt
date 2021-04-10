@@ -1,6 +1,0 @@
-﻿DarkCarnival,Rein,Bradley,Thomas,Hoek,Jack,Wessel,Tom,Niels,3,2
-NoMercy,Rein,Jack,Alex,Aaron,Moss,Adam,Hoek,Luke,3.5,1.5
-DeadAir,Aron,Rein,Luke,Thomas,Jack,Adam,Moss,Alex,5,0
-DeathToll,Rein,Moss,Aaron,Aron,Luke,Adam,Alex,Koen,4,1
-DeadAir,Luke,Rein,Koen,Luddow,Jack,Niels,Tom,Thomas,3.5,1.5
-BloodHarvest,Rein,Luke,Bradley,Adam,Thomas,Moss,Aaron,Alex,2.5,2.5
