@@ -971,7 +971,7 @@ namespace EloSystem
                             min = o;
                         }
                     }
-                    mins.Add(List<int>.IndexOf(eloDiff, row), min);
+                    mins.Add(eloDiff.IndexOf(row), min);
                 }
                 foreach (int p in mins)
                 {
