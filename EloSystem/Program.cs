@@ -23,7 +23,7 @@ namespace EloSystem
 
 
 
-
+        //Start Main ------------------------------------------------------------
         static void Main(string[] args)
         {
             //Grabbing data from database
@@ -32,6 +32,7 @@ namespace EloSystem
             grabMapStats();
 
             Console.WriteLine("---------------------------- Welcome to the Elo zone ---------------------------- \n\n\nWould you like to generate random teams or enter a result? (T/R) ");
+
             string answer = "";
             bool correctAns = true;
             while (correctAns)
@@ -40,7 +41,7 @@ namespace EloSystem
                 if (answer.ToUpper() == "R")
                 {
                     grabTeams();
-                    
+
                     Console.WriteLine("Please enter the map played: ");
                     string mapChoiceS = "";
                     bool nameCheck = true;
@@ -86,9 +87,22 @@ namespace EloSystem
                     makeTeams();
                     correctAns = false;
                 }
-                else if(answer.ToUpper() == "P")
+                else if (answer.ToUpper() == "P")
                 {
                     inputDataFromTextFile();
+                    Console.WriteLine("Rerun complete");
+                }
+                else if (answer.ToUpper() == "K")
+                {
+                    Console.WriteLine("Please enter the number of games to be simulated:");
+                    int numGames = Convert.ToInt32(Console.ReadLine());
+                    simulateGames(numGames);
+                    Console.WriteLine("Games simulated");
+                }
+                else if (answer.ToUpper() == "L")
+                {
+                    grabPlayers();
+                    generateAllTeams();
                 }
                 else
                 {
@@ -99,183 +113,9 @@ namespace EloSystem
 
 
         }
+        //End Main ------------------------------------------------------------
 
-        static bool checkName(string playerName)
-        {
-            bool correctName = false;
-            for(int t = 0; t < heldPlayerStats.Count; t++)
-            {
-                if(correctName != true)
-                {
-                    if(heldPlayerStats[t].playerName.ToUpper() == playerName.ToUpper())
-                    {
-                        correctName = true;
-                    }
-                }
 
-            }
-                return correctName;
-        }
-
-        static bool checkMap(string mapName)
-        {
-            bool correctName = false;
-            for (int t = 0; t < heldMaps.Count; t++)
-            {
-                if (correctName != true)
-                {
-                    if (heldMaps[t].mapName.ToUpper() == mapName.ToUpper())
-                    {
-                        correctName = true;
-                    }
-                }
-
-            }
-            return correctName;
-        }
-
-        static void getName(string nameToFill)
-        {
-            bool nameCheck = true;
-            while (nameCheck)
-            {
-                nameToFill = Console.ReadLine();
-                bool testBool = checkName(nameToFill);
-                if (testBool)
-                {
-                    nameCheck = false;
-                }
-                else
-                {
-                    Console.WriteLine("No record with that name, please try again: ");
-                }
-
-            }
-            //Add the ability to display player list in this section if the user enteres # or smth
-        }
-
-        static void getMapName(string nameToFill)
-        {
-            bool nameCheck = true;
-            while (nameCheck)
-            {
-                nameToFill = Console.ReadLine();
-                bool testBool = checkMap(nameToFill);
-                if (testBool)
-                {
-                    nameCheck = false;
-                }
-                else
-                {
-                    Console.WriteLine("No record with that name, please try again: ");
-                }
-
-            }
-            //Add the ability to display map list in this section if the user enteres ' or smth
-        }
-
-        static void instansiateStatsArray(playerStats[] instAll)
-        {
-            instAll[0] = new playerStats();
-            instAll[1] = new playerStats();
-            instAll[2] = new playerStats();
-            instAll[3] = new playerStats();
-            instAll[4] = new playerStats();
-            instAll[5] = new playerStats();
-            instAll[6] = new playerStats();
-            instAll[7] = new playerStats();
-        }
-
-        static void calculateAndSetVolatility(playerStats player)
-        {
-            int gamesPlayed = player.matchesPlayed;
-            player.volatility = 1.25 * (1 / (0.2 * Convert.ToDouble(gamesPlayed) + 1)) + 0.3;
-        }
-
-        static void grabPlayerStats()
-        {
-            using (SqlConnection eloCon = new SqlConnection(conStr))
-            {
-                string queryStr = "Select * FROM PlayerStats";
-                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
-
-                eloCon.Open();
-                using (SqlDataReader oReader = cmd.ExecuteReader())
-                {
-                    while (oReader.Read())
-                    {
-                        playerStats tempStats = new playerStats(Convert.ToString(oReader[1]), Convert.ToInt32(oReader[2]), 0.0);
-                        heldPlayerStats.Add(tempStats);
-                    }
-                }
-            }
-            instansiateStatsArray(playersInGame);
-        }
-
-        static void grabMapStats()
-        {
-            using (SqlConnection eloCon = new SqlConnection(conStr))
-            {
-                string queryStr = "Select * FROM Maps";
-                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
-
-                eloCon.Open();
-                using (SqlDataReader oReader = cmd.ExecuteReader())
-                {
-                    while (oReader.Read())
-                    {
-                        map tempMap = new map(Convert.ToString(oReader[1]), Convert.ToInt32(oReader[2]));
-                        heldMaps.Add(tempMap);
-                    }
-                }
-            }
-        }
-
-        static void grabPreviousMatchStats()
-        {
-            using (SqlConnection eloCon = new SqlConnection(conStr))
-            {
-                string queryStr = "Select * FROM MatchResults WHERE DateOfMatch >= DATEADD(M, -3, GETDATE()) ";
-                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
-
-                eloCon.Open();
-                using (SqlDataReader oReader = cmd.ExecuteReader())
-                {
-                    while (oReader.Read())
-                    {
-                        matchResults tempMatch = new matchResults();
-                        tempMatch = tempMatch.matchResultsTeamInput(Convert.ToString(oReader[1]), team1, team2, Convert.ToInt32(oReader[3]), 
-                                Convert.ToInt32(oReader[4]), Convert.ToDateTime(oReader[5]));
-                        matchResultsPrev.Add(tempMatch);
-                    }
-                }
-            }
-        }
-        static void findMatchesPlayed(playerStats player)
-        {
-            using (SqlConnection eloCon = new SqlConnection(conStr))
-            {
-                string queryStr = "Select COUNT(idMatchResults) FROM MatchResults WHERE DateOfMatch >= DATEADD(M, -3, GETDATE()) AND" +
-                    "(team1player1 = '" + player.playerName + "' OR " +
-                    "team1player2 = '" + player.playerName + "' OR " +
-                    "team1player3 = '" + player.playerName + "' OR " +
-                    "team1player4 = '" + player.playerName + "' OR " +
-                    "team2player1 = '" + player.playerName + "' OR " +
-                    "team2player2 = '" + player.playerName + "' OR " +
-                    "team2player3 = '" + player.playerName + "' OR " +
-                    "team2player4 = '" + player.playerName + "')";
-                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
-
-                eloCon.Open();
-                using (SqlDataReader oReader = cmd.ExecuteReader())
-                {
-                    while (oReader.Read())
-                    {
-                        player.matchesPlayed = Convert.ToInt32(oReader[0]);
-                    }
-                }
-            }
-        }
 
         static double calculateTeamPerformaceRating(double eteamElo, double roundsWon, double roundsLost)
         {
@@ -286,18 +126,185 @@ namespace EloSystem
         static double calculateEloChange(playerStats player,int TeamPerformanceRating, bool team1B)
         {
             double eloChange = 0;
-            int dp = TeamPerformanceRating - player.playerElo;
-            double calculatedExpectedScore = calculateExpectedScore(team1, team2);
-            double expectedMapWinsTeam1 = mapChoice.maps * calculatedExpectedScore;
-            double expectedMapWinsTeam2 = mapChoice.maps * (1-calculatedExpectedScore);
-
-            if (team1B) 
+            double dp = 0;
+            if (team1B)
             {
-                eloChange = dp * player.volatility * expectedScoreForElo(calculatedExpectedScore, true);
+                dp = TeamPerformanceRating - team1.calculateTeamEloAvg();
             }
             else
             {
-                eloChange = dp * player.volatility * expectedScoreForElo(1 - calculatedExpectedScore, false);
+                dp = TeamPerformanceRating - team2.calculateTeamEloAvg();
+            }
+            double calculatedExpectedScore = calculateExpectedScore(team1, team2);
+            double expectedMapWinsTeam1 = mapChoice.maps * calculatedExpectedScore;
+            double expectedMapWinsTeam2 = mapChoice.maps * (1 - calculatedExpectedScore);
+            double team1ExpectedScore = expectedScoreForElo(calculatedExpectedScore, true);
+            double team2ExpectedScore = expectedScoreForElo(1 - calculatedExpectedScore, false);
+            double differ = 1.0;
+
+            /*if (team1B)
+            {
+                double eloDifference = team1.calculateTeamEloAvg() - player.playerElo > 0 ? team1.calculateTeamEloAvg() - player.playerElo : (team1.calculateTeamEloAvg() - player.playerElo) * -1;
+                differ = team1.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / 0.003)) : 1;
+            }
+            else
+            {
+                double eloDifference = team1.calculateTeamEloAvg() - player.playerElo > 0 ? team1.calculateTeamEloAvg() - player.playerElo : (team1.calculateTeamEloAvg() - player.playerElo) * -1;
+                differ = team2.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / 0.003)) : 1;
+            }
+            differ = differ < 0.1 ? 0.1 : differ;
+            differ = differ > 1 ? 1 : differ;
+            if (team1B)
+            {
+                eloChange = dp * team1ExpectedScore * differ; //Removed * player.volatility
+                if (team1Wins > team2Wins)
+                {
+                    eloChange = eloChange < 0 ? eloChange * (-1) : eloChange * (1);
+                }
+                else if (team1Wins < team2Wins)
+                {
+                    eloChange = eloChange < 0 ? eloChange * (1) : eloChange * (-1);
+                }
+            }
+            else
+            {
+                eloChange = dp * team2ExpectedScore * differ; // Removed * player.volatility
+                if (team2Wins > team1Wins)
+                {
+                    eloChange = eloChange < 0 ? eloChange * (-1) : eloChange * (1);
+                }
+                else if (team2Wins < team1Wins)
+                {
+                    eloChange = eloChange < 0 ? eloChange * (1) : eloChange * (-1);
+                }
+            }*/
+
+            double lowDenominator = 0.003;
+            double highDenominator = 0.006;
+            if (team1B)
+            {
+                double eloDifference = team1.calculateTeamEloAvg() - player.playerElo > 0 ? team1.calculateTeamEloAvg() - player.playerElo : (team1.calculateTeamEloAvg() - player.playerElo) * -1;
+                //First if your elo is higher win/loss
+                if (team1.calculateTeamEloAvg() < player.playerElo)
+                {
+                    //If win gain less elo
+                    if (team1Wins > team2Wins)
+                    {
+                        differ = team1.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / lowDenominator)) : 1;
+                    }
+                    else if (team1Wins < team2Wins) //Loss so lose more elo
+                    {
+                        differ = team1.calculateTeamEloAvg() != player.playerElo ? (eloDifference / (1 / highDenominator)) : 1;
+                    }
+                    else
+                    {
+                        if(player.playerElo > team2.calculateTeamEloAvg()) //Player elo higher or lower than enemy teams
+                        {
+                            differ = team1.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / lowDenominator)) : 1;
+                        }
+                        else
+                        {
+                            differ = team1.calculateTeamEloAvg() != player.playerElo ? (eloDifference / (1 / lowDenominator)) : 1;
+                        }
+                    }
+                }
+                else if (team1.calculateTeamEloAvg() > player.playerElo)
+                {
+                    //If win gain more elo
+                    if (team1Wins > team2Wins)
+                    {
+                        differ = team1.calculateTeamEloAvg() != player.playerElo ? 0.5 + (eloDifference / (1 / highDenominator)) : 1;
+                    }
+                    else if (team1Wins < team2Wins) //Loss so lose less elo
+                    {
+                        differ = team1.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / lowDenominator)) : 1;
+                    }
+                    else
+                    {
+                        if (player.playerElo > team2.calculateTeamEloAvg())
+                        {
+                            differ = team1.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / lowDenominator)) : 1;
+                        }
+                        else
+                        {
+                            differ = team1.calculateTeamEloAvg() != player.playerElo ? (eloDifference / (1 / lowDenominator)) : 1;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                double eloDifference = team2.calculateTeamEloAvg() - player.playerElo > 0 ? team2.calculateTeamEloAvg() - player.playerElo : (team2.calculateTeamEloAvg() - player.playerElo) * -1;
+                //First if your elo is higher win/loss
+                if (team2.calculateTeamEloAvg() < player.playerElo)
+                {
+                    //If win gain less elo
+                    if (team2Wins > team1Wins)
+                    {
+                        differ = team2.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / lowDenominator)) : 1;
+                    }
+                    else if (team2Wins < team1Wins) //Loss so lose more elo
+                    {
+                        differ = team2.calculateTeamEloAvg() != player.playerElo ? 0.5 + (eloDifference / (1 / highDenominator)) : 1;
+                    }
+                    else
+                    {
+                        if (player.playerElo > team1.calculateTeamEloAvg())
+                        {
+                            differ = team2.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / lowDenominator)) : 1;
+                        }
+                        else
+                        {
+                            differ = team2.calculateTeamEloAvg() != player.playerElo ? (eloDifference / (1 / lowDenominator)) : 1;
+                        }
+                    }
+                }
+                else if (team2.calculateTeamEloAvg() > player.playerElo)
+                {
+                    //If win gain more elo
+                    if (team2Wins > team1Wins)
+                    {
+                        differ = team2.calculateTeamEloAvg() != player.playerElo ? 0.5 + (eloDifference / (1 / highDenominator)) : 1;
+                    }
+                    else if (team2Wins < team1Wins) //Loss so lose less elo
+                    {
+                        differ = team2.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / lowDenominator)) : 1;
+                    }
+                    else
+                    {
+                        if (player.playerElo > team2.calculateTeamEloAvg())
+                        {
+                            differ = team2.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / lowDenominator)) : 1;
+                        }
+                        else
+                        {
+                            differ = team2.calculateTeamEloAvg() != player.playerElo ? (eloDifference / (1 / lowDenominator)) : 1;
+                        }
+                    }
+                }
+            }
+
+            //Before adding if you lose and your elo is higher you lose more changy wangy 
+            /*if (team1B)
+            {
+                double eloDifference = team1.calculateTeamEloAvg() - player.playerElo > 0 ? team1.calculateTeamEloAvg() - player.playerElo : (team1.calculateTeamEloAvg() - player.playerElo) * -1;
+                differ = team1.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / 0.003)) : 1;
+            }
+            else
+            {
+                double eloDifference = team1.calculateTeamEloAvg() - player.playerElo > 0 ? team1.calculateTeamEloAvg() - player.playerElo : (team1.calculateTeamEloAvg() - player.playerElo) * -1;
+                differ = team2.calculateTeamEloAvg() != player.playerElo ? 1 - (eloDifference / (1 / 0.003)) : 1;
+            }*/
+
+            differ = differ < 0.1 ? 0.1 : differ;
+            differ = differ > 2 ? 2 : differ;
+            if (team1B)
+            {
+                eloChange = dp * team1ExpectedScore * differ;
+            }
+            else
+            {
+                eloChange = dp * team2ExpectedScore * differ;
             }
 
             return eloChange;
@@ -340,12 +347,12 @@ namespace EloSystem
 
             double expectedScore = 0.0;
 
-            expectedScore = 1 / (1 + Math.Pow(10, (-(team1.calculateTeamEloAvg() - team2.calculateTeamEloAvg()) / 400)));
+            expectedScore = 1 / (1 + Math.Pow(10, (-(team1.calculateTeamEloAvg() - team2.calculateTeamEloAvg()) / 600))); //Changed from 400 to 600 21102022
 
             return expectedScore;
         }
 
-
+        //Calculating scores, reading and writing from database
         static void calculateAndApplyEloChanges()
         {
             int team1Perf = Convert.ToInt32(Math.Ceiling(calculateTeamPerformaceRating(team2.calculateTeamEloAvg(), team1Wins, team2Wins)));
@@ -377,28 +384,34 @@ namespace EloSystem
             addToPlayerMaps(team2.player4, team2Wins, team1Wins);
 
 
-            File.AppendAllText( @"K:\\Elo\\EloSystem\\EloSystem\\logs.txt", team1.player1.playerName + "Change = " + Convert.ToString(player1EloChange) + ", " +
-                    team1.player2.playerName + "Change = " + Convert.ToString(player2EloChange) + ", " +
-                    team1.player3.playerName + "Change = " + Convert.ToString(player3EloChange) + ", " +
-                    team1.player4.playerName + "Change = " + Convert.ToString(player4EloChange) + ", " +
-                    team2.player1.playerName + "Change = " + Convert.ToString(player5EloChange) + ", " +
-                    team2.player2.playerName + "Change = " + Convert.ToString(player6EloChange) + ", " +
-                    team2.player3.playerName + "Change = " + Convert.ToString(player7EloChange) + ", " +
-                    team2.player4.playerName + "Change = " + Convert.ToString(player8EloChange) + ", " +
-                    "Team1Perf = " + Convert.ToString(team1Perf) + ", " +
-                    "Team2Perf = " + Convert.ToString(team2Perf) + ", " +
-                    "DateOfMatch = " + Convert.ToString(DateTime.Now) + Environment.NewLine);
+            try
+            {
+                File.AppendAllText(@"K:\\Elo\\EloSystem\\EloSystem\\logs.txt", team1.player1.playerName + "Change = " + Convert.ToString(player1EloChange) + ", Volatility: " + team1.player1.volatility + ", " +
+                                    team1.player2.playerName + "Change = " + Convert.ToString(player2EloChange) + ", Volatility: " + team1.player2.volatility + ", " +
+                                    team1.player3.playerName + "Change = " + Convert.ToString(player3EloChange) + ", Volatility: " + team1.player3.volatility + ", " +
+                                    team1.player4.playerName + "Change = " + Convert.ToString(player4EloChange) + ", Volatility: " + team1.player4.volatility + ", " +
+                                    team2.player1.playerName + "Change = " + Convert.ToString(player5EloChange) + ", Volatility: " + team2.player1.volatility + ", " +
+                                    team2.player2.playerName + "Change = " + Convert.ToString(player6EloChange) + ", Volatility: " + team2.player2.volatility + ", " +
+                                    team2.player3.playerName + "Change = " + Convert.ToString(player7EloChange) + ", Volatility: " + team2.player3.volatility + ", " +
+                                    team2.player4.playerName + "Change = " + Convert.ToString(player8EloChange) + ", Volatility: " + team2.player4.volatility + ", " +
+                                    "Team1Perf = " + Convert.ToString(team1Perf) + ", " +
+                                    "Team2Perf = " + Convert.ToString(team2Perf) + ", " +
+                                    "DateOfMatch = " + Convert.ToString(DateTime.Now) + Environment.NewLine);
 
-            File.AppendAllText(@"K:\\Elo\\EloSystem\\EloSystem\\aaronPython.txt", Environment.NewLine + team1.player1.playerName + "," + Convert.ToString(player1EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
-                + Environment.NewLine + team1.player2.playerName + "," + Convert.ToString(player2EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
-                + Environment.NewLine + team1.player3.playerName + "," + Convert.ToString(player3EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
-                + Environment.NewLine + team1.player4.playerName + "," + Convert.ToString(player4EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
-                + Environment.NewLine + team2.player1.playerName + "," + Convert.ToString(player5EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
-                + Environment.NewLine + team2.player2.playerName + "," + Convert.ToString(player6EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
-                + Environment.NewLine + team2.player3.playerName + "," + Convert.ToString(player7EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
-                + Environment.NewLine + team2.player4.playerName + "," + Convert.ToString(player8EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
-                );
-
+                File.AppendAllText(@"K:\\Elo\\EloSystem\\EloSystem\\aaronPython.txt", Environment.NewLine + team1.player1.playerName + "," + Convert.ToString(player1EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
+                    + Environment.NewLine + team1.player2.playerName + "," + Convert.ToString(player2EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
+                    + Environment.NewLine + team1.player3.playerName + "," + Convert.ToString(player3EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
+                    + Environment.NewLine + team1.player4.playerName + "," + Convert.ToString(player4EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
+                    + Environment.NewLine + team2.player1.playerName + "," + Convert.ToString(player5EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
+                    + Environment.NewLine + team2.player2.playerName + "," + Convert.ToString(player6EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
+                    + Environment.NewLine + team2.player3.playerName + "," + Convert.ToString(player7EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
+                    + Environment.NewLine + team2.player4.playerName + "," + Convert.ToString(player8EloChange) + "," + Convert.ToString(DateTime.Now).Replace(" ", "")
+                    );
+            }catch(Exception e)
+            {
+                Console.Write(e.Message);
+            }
+            
         }
 
         static void applyEloChange(double eloChange, playerStats player)
@@ -420,22 +433,19 @@ namespace EloSystem
                 string queryStr = "INSERT INTO MatchResults (MapName, Team1Wins, Team2Wins, Draws, DateOfMatch, team1player1, team1player2" +
                     ", team1player3, team1player4, team2player1, team2player2, team2player3, team2player4) VALUES ('" +
                     mapChoice.mapName + "','" + Convert.ToString(team1Wins) + "','" + Convert.ToString(team2Wins) + "','" + Convert.ToString(draws) + "','" +
-                    Convert.ToString(DateTime.Now) + "','" + team1.player1.playerName + "','" + team1.player2.playerName + "','" + team1.player3.playerName + "','" +
+                    DateTime.Now.ToString("yyyyMMdd HH:mm:ss") + "','" + team1.player1.playerName + "','" + team1.player2.playerName + "','" + team1.player3.playerName + "','" +
                     team1.player4.playerName + "','" + team2.player1.playerName + "','" + team2.player2.playerName + "','" + team2.player3.playerName + "','" +
                     team2.player4.playerName + "')";
                 SqlCommand cmd = new SqlCommand(queryStr, eloCon);
                 cmd.ExecuteNonQuery();
-
-                
-
             }
 
             if (printToPrevMatches)
             {
                 File.AppendAllText(@"K:\\Elo\\EloSystem\\EloSystem\\PrevMatches.txt", Environment.NewLine + mapChoice.mapName + "," + team1.player1.playerName + "," + team1.player2.playerName + "," +
                     team1.player3.playerName + "," + team1.player4.playerName + "," +
-                    team2.player1.playerName + "," + team1.player2.playerName + "," +
-                    team2.player3.playerName + "," + team1.player4.playerName + "," +
+                    team2.player1.playerName + "," + team2.player2.playerName + "," +
+                    team2.player3.playerName + "," + team2.player4.playerName + "," +
                     Convert.ToString(team1Wins) + "," + Convert.ToString(team2Wins)
                 );
             }
@@ -643,16 +653,19 @@ namespace EloSystem
                 calculateAndApplyEloChanges();
                 matchResults gameResults = new matchResults(mapChoice.mapName, team1.player1, team1.player2, team1.player3, team1.player4, team2.player1, team2.player2, team2.player3, team2.player4
                     , team1Wins, team2Wins, DateTime.Now);
-                commitMatchResult(gameResults,true);
+                commitMatchResult(gameResults,false);
 
                 team1Wins = 0;
                 team2Wins = 0;
                 draws = 0;
             }
         }
+        //End database read and write
 
+        //Generating Teams
         static void makeTeams()
         {
+            //Alternate sort
             playersInGameL.Sort((x, y) => x.playerElo.CompareTo(y.playerElo));
             playersInGameL.Reverse();
             team1.player1 = playersInGameL[0];
@@ -665,11 +678,238 @@ namespace EloSystem
             team2.player3 = playersInGameL[4];
             team2.player4 = playersInGameL[6];
 
-            Console.WriteLine("Alternate sort: \n\tTeam 1:\n\t\t-{0}\n\t\t-{1}\n\t\t-{2}\n\t\t-{3}\n\n\t\tAverage Elo = {8}\n\tTeam 2:\n\t\t-{4}\n\t\t-{5}\n\t\t-{6}\n\t\t-{7}\n\n\t\tAverage Elo = {9}",
+            /*Console.WriteLine("Alternate (cringe) sort: \n\tTeam 1:\n\t\t-{0}\n\t\t-{1}\n\t\t-{2}\n\t\t-{3}\n\n\t\tAverage Elo = {8}\n\tTeam 2:\n\t\t-{4}\n\t\t-{5}\n\t\t-{6}\n\t\t-{7}\n\n\t\tAverage Elo = {9}",
                 team1.player1.playerName, team1.player2.playerName, team1.player3.playerName, team1.player4.playerName,
                 team2.player1.playerName, team2.player2.playerName, team2.player3.playerName, team2.player4.playerName,
-                Convert.ToString(team1.calculateTeamEloAvg()), Convert.ToString(team2.calculateTeamEloAvg()));
+                Convert.ToString(team1.calculateTeamEloAvg()), Convert.ToString(team2.calculateTeamEloAvg()));*/
+
+            Console.WriteLine("Alternate (cringe) sort:");
+            Console.WriteLine("|--- Team 1 ---|--- Team 2 ---|\n" +
+                               //First Line DO THE CONVERT TO DOUBLES AND TEST
+                              "|"+new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - team1.player1.playerName.Length)/2))))
+                              + team1.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - team1.player1.playerName.Length) / 2))))+"|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(team2.player1.playerName.Length)) / 2))))
+                              + team2.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - team2.player1.playerName.Length) / 2)))) + "|\n"+
+                              //Second Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - team1.player2.playerName.Length) / 2))))
+                              + team1.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - team1.player2.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(team2.player2.playerName.Length)) / 2))))
+                              + team2.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - team2.player2.playerName.Length) / 2)))) + "|\n"+
+                              //Third Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - team1.player3.playerName.Length) / 2))))
+                              + team1.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - team1.player3.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - team2.player3.playerName.Length) / 2))))
+                              + team2.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - team2.player3.playerName.Length) / 2)))) + "|\n" +
+                              //Fourth Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - team1.player4.playerName.Length) / 2))))
+                              + team1.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - team1.player4.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - team2.player4.playerName.Length) / 2))))
+                              + team2.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - team2.player4.playerName.Length) / 2)))) + "|\n" +
+                              //Fifth Line - Elos
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(team1.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(team1.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(team1.calculateTeamEloAvg()).Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(team2.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(team2.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(team2.calculateTeamEloAvg()).Length) / 2)))) + "|\n" +
+                              "|-----------------------------|");
+
+
+
+
+            //Chad sort
+            List<team> allTeams = generateAllTeams();
+            List<int[]> teamIndexes = new List<int[]>(); //Stores the indexes of the team
+            List<eloDifferenceAndIndex> eloDiffAndIndex = new List<eloDifferenceAndIndex>(); //Stores the index of the above list which holds info about the teams and the elo difference in the teams.
+            for (int a = 0; a < allTeams.Count; a++)
+            {
+                for(int b = 0; b < allTeams.Count; b++)
+                {
+                    team tA = allTeams[a];
+                    team tB = allTeams[b];
+                    bool compute = true;
+                    compute = compute && (!tB.findPlayer(tA.player1)) ? true : false;
+                    compute = compute && (!tB.findPlayer(tA.player2)) ? true : false;
+                    compute = compute && (!tB.findPlayer(tA.player3)) ? true : false;
+                    compute = compute && (!tB.findPlayer(tA.player4)) ? true : false;
+                    if (compute)
+                    {
+                        double eloDifference = tA.calculateTeamEloAvg() - tB.calculateTeamEloAvg();
+                        eloDifference = eloDifference < 0 ? eloDifference * (-1) : eloDifference;
+                        int[] tempIndexArray = new int[] { a, b };
+                        teamIndexes.Add(tempIndexArray);
+                        eloDifferenceAndIndex tempDoubleArray = new eloDifferenceAndIndex(eloDifference, teamIndexes.Count - 1);
+                        eloDiffAndIndex.Add(tempDoubleArray);
+                    }
+                }
+            }
+            eloDiffAndIndex.Sort((x, y) => x.eloDiff.CompareTo(y.eloDiff));
+            team closestElo1 = allTeams[teamIndexes[eloDiffAndIndex[0].index][0]];
+            team closestElo2 = allTeams[teamIndexes[eloDiffAndIndex[0].index][1]];
+
+            /*Console.WriteLine("Algorithmic(lol) sort: \n\tTeam 1:\n\t\t-{0}\n\t\t-{1}\n\t\t-{2}\n\t\t-{3}\n\n\t\tAverage Elo = {8}\n\tTeam 2:\n\t\t-{4}\n\t\t-{5}\n\t\t-{6}\n\t\t-{7}\n\n\t\tAverage Elo = {9}",
+                closestElo1.player1.playerName, closestElo1.player2.playerName, closestElo1.player3.playerName, closestElo1.player4.playerName,
+                closestElo2.player1.playerName, closestElo2.player2.playerName, closestElo2.player3.playerName, closestElo2.player4.playerName,
+                Convert.ToString(closestElo1.calculateTeamEloAvg()), Convert.ToString(closestElo2.calculateTeamEloAvg()));*/
+
+            Console.WriteLine("Algorithmic sort, closest:");
+            Console.WriteLine("|--- Team 1 ---|--- Team 2 ---|\n" +
+                              //First Line DO THE CONVERT TO DOUBLES AND TEST
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player1.playerName.Length) / 2))))
+                              + closestElo1.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player1.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player1.playerName.Length)) / 2))))
+                              + closestElo2.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player1.playerName.Length) / 2)))) + "|\n" +
+                              //Second Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player2.playerName.Length) / 2))))
+                              + closestElo1.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player2.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player2.playerName.Length)) / 2))))
+                              + closestElo2.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player2.playerName.Length) / 2)))) + "|\n" +
+                              //Third Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player3.playerName.Length) / 2))))
+                              + closestElo1.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player3.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player3.playerName.Length)) / 2))))
+                              + closestElo2.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player3.playerName.Length) / 2)))) + "|\n" +
+                              //Fourth Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player4.playerName.Length) / 2))))
+                              + closestElo1.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player4.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo2.player4.playerName.Length) / 2))))
+                              + closestElo2.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player4.playerName.Length) / 2)))) + "|\n" +
+                              //Fifth Line - Elos
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(closestElo1.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(closestElo1.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(closestElo1.calculateTeamEloAvg()).Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(closestElo2.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(closestElo2.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(closestElo2.calculateTeamEloAvg()).Length) / 2)))) + "|\n" +
+                              "|-----------------------------|");
+            closestElo1 = allTeams[teamIndexes[eloDiffAndIndex[2].index][0]];
+            closestElo2 = allTeams[teamIndexes[eloDiffAndIndex[2].index][1]];
+            Console.WriteLine("Algorithmic sort, 2nd:");
+            Console.WriteLine("|--- Team 1 ---|--- Team 2 ---|\n" +
+                              //First Line DO THE CONVERT TO DOUBLES AND TEST
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player1.playerName.Length) / 2))))
+                              + closestElo1.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player1.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player1.playerName.Length)) / 2))))
+                              + closestElo2.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player1.playerName.Length) / 2)))) + "|\n" +
+                              //Second Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player2.playerName.Length) / 2))))
+                              + closestElo1.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player2.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player2.playerName.Length)) / 2))))
+                              + closestElo2.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player2.playerName.Length) / 2)))) + "|\n" +
+                              //Third Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player3.playerName.Length) / 2))))
+                              + closestElo1.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player3.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player3.playerName.Length)) / 2))))
+                              + closestElo2.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player3.playerName.Length) / 2)))) + "|\n" +
+                              //Fourth Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player4.playerName.Length) / 2))))
+                              + closestElo1.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player4.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo2.player4.playerName.Length) / 2))))
+                              + closestElo2.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player4.playerName.Length) / 2)))) + "|\n" +
+                              //Fifth Line - Elos
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(closestElo1.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(closestElo1.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(closestElo1.calculateTeamEloAvg()).Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(closestElo2.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(closestElo2.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(closestElo2.calculateTeamEloAvg()).Length) / 2)))) + "|\n" +
+                              "|-----------------------------|");
+
+            closestElo1 = allTeams[teamIndexes[eloDiffAndIndex[4].index][0]];
+            closestElo2 = allTeams[teamIndexes[eloDiffAndIndex[4].index][1]];
+            Console.WriteLine("Algorithmic sort, 3rd:");
+            Console.WriteLine("|--- Team 1 ---|--- Team 2 ---|\n" +
+                              //First Line DO THE CONVERT TO DOUBLES AND TEST
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player1.playerName.Length) / 2))))
+                              + closestElo1.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player1.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player1.playerName.Length)) / 2))))
+                              + closestElo2.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player1.playerName.Length) / 2)))) + "|\n" +
+                              //Second Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player2.playerName.Length) / 2))))
+                              + closestElo1.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player2.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player2.playerName.Length)) / 2))))
+                              + closestElo2.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player2.playerName.Length) / 2)))) + "|\n" +
+                              //Third Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player3.playerName.Length) / 2))))
+                              + closestElo1.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player3.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player3.playerName.Length)) / 2))))
+                              + closestElo2.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player3.playerName.Length) / 2)))) + "|\n" +
+                              //Fourth Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player4.playerName.Length) / 2))))
+                              + closestElo1.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player4.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo2.player4.playerName.Length) / 2))))
+                              + closestElo2.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player4.playerName.Length) / 2)))) + "|\n" +
+                              //Fifth Line - Elos
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(closestElo1.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(closestElo1.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(closestElo1.calculateTeamEloAvg()).Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(closestElo2.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(closestElo2.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(closestElo2.calculateTeamEloAvg()).Length) / 2)))) + "|\n" +
+                              "|-----------------------------|");
+
+            closestElo1 = allTeams[teamIndexes[eloDiffAndIndex[6].index][0]];
+            closestElo2 = allTeams[teamIndexes[eloDiffAndIndex[6].index][1]];
+            Console.WriteLine("Algorithmic sort, 4th:");
+            Console.WriteLine("|--- Team 1 ---|--- Team 2 ---|\n" +
+                              //First Line DO THE CONVERT TO DOUBLES AND TEST
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player1.playerName.Length) / 2))))
+                              + closestElo1.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player1.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player1.playerName.Length)) / 2))))
+                              + closestElo2.player1.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player1.playerName.Length) / 2)))) + "|\n" +
+                              //Second Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player2.playerName.Length) / 2))))
+                              + closestElo1.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player2.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player2.playerName.Length)) / 2))))
+                              + closestElo2.player2.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player2.playerName.Length) / 2)))) + "|\n" +
+                              //Third Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player3.playerName.Length) / 2))))
+                              + closestElo1.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player3.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToDouble(closestElo2.player3.playerName.Length)) / 2))))
+                              + closestElo2.player3.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player3.playerName.Length) / 2)))) + "|\n" +
+                              //Fourth Line
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo1.player4.playerName.Length) / 2))))
+                              + closestElo1.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo1.player4.playerName.Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - closestElo2.player4.playerName.Length) / 2))))
+                              + closestElo2.player4.playerName + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - closestElo2.player4.playerName.Length) / 2)))) + "|\n" +
+                              //Fifth Line - Elos
+                              "|" + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(closestElo1.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(closestElo1.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(closestElo1.calculateTeamEloAvg()).Length) / 2)))) + "|"
+                              + new string(' ', Convert.ToInt32(Math.Floor(Convert.ToDouble((14.0 - Convert.ToString(closestElo2.calculateTeamEloAvg()).Length) / 2))))
+                              + Convert.ToString(closestElo2.calculateTeamEloAvg()) + new string(' ', Convert.ToInt32(Math.Ceiling(Convert.ToDouble((14.0 - Convert.ToString(closestElo2.calculateTeamEloAvg()).Length) / 2)))) + "|\n" +
+                              "|-----------------------------|");
         }
+
+        class eloDifferenceAndIndex
+        {
+            public eloDifferenceAndIndex(double elo, int i)
+            {
+                eloDiff = elo;
+                index = i;
+            }
+
+            public double eloDiff { get; set; }
+            public int index { get; set; }
+        }
+
+        static List<team> generateAllTeams() //Need to generate 70 teams
+        {
+            List<team> allTeams = new List<team>();
+            for (int a = 0; a < 8; a++)
+                for(int b = a+1; b < 8; b++)
+                    for (int c = b + 1; c < 8; c++)
+                        for (int d = c + 1; d < 8; d++)
+                        {
+                            team testTeam = new team(playersInGameL[a], playersInGameL[b], playersInGameL[c], playersInGameL[d]);
+                            bool unique = true;
+                            foreach(team x in allTeams)
+                            {
+                                if(x.sameTeam(testTeam))
+                                {
+                                    unique = false;
+                                    break;
+                                }
+                            }
+
+                            if (unique)
+                                allTeams.Add(testTeam);
+                        }
+            return allTeams;
+        }
+
+        //End Generating teams
 
         static void grabTeams()
         {
@@ -821,43 +1061,8 @@ namespace EloSystem
             calcPlayerStats();
         }
 
-        static void grabPlayers()
-        {
-            for(int i = 0; i < 8; i++)
-            {
-                bool nameCheck = true;
-                Console.WriteLine("Please enter next player: ");
-                while (nameCheck)
-                {
-                    string tempName = Console.ReadLine();
-                    bool testBool = checkName(tempName);
-                    if (testBool)
-                    {
-                        nameCheck = false;
-                        playersInGameL.Add(heldPlayerStats.Find(x => x.playerName == tempName));
-                    }
-                    else
-                    {
-                        Console.WriteLine("No record with that name, please try again: ");
-                    }
-                }
-            }
-        }
-
-        static void averageEloCalculator()
-        {
-            playerStats[,] pairs = new playerStats[4, 2];
-
-            for(int i = 0; i < 8; i++)
-            {
-                bool belowLarger = false;
-                if(i-1 > 0)
-                {
-
-                }
-            }
-        }
-
+        
+        //Rerunning games 
         static void inputDataFromTextFile()
         {
             using (SqlConnection eloCon = new SqlConnection(conStr))
@@ -930,8 +1135,207 @@ namespace EloSystem
 
         }
 
-        
+        //Start Checks --------------------------------------------------------
+        static bool checkName(string playerName)
+        {
+            bool correctName = false;
+            for (int t = 0; t < heldPlayerStats.Count; t++)
+            {
+                if (correctName != true)
+                {
+                    if (heldPlayerStats[t].playerName.ToUpper() == playerName.ToUpper())
+                    {
+                        correctName = true;
+                    }
+                }
 
+            }
+            return correctName;
+        }
+
+        static bool checkMap(string mapName)
+        {
+            bool correctName = false;
+            for (int t = 0; t < heldMaps.Count; t++)
+            {
+                if (correctName != true)
+                {
+                    if (heldMaps[t].mapName.ToUpper() == mapName.ToUpper())
+                    {
+                        correctName = true;
+                    }
+                }
+
+            }
+            return correctName;
+        }
+
+        static void getName(string nameToFill)
+        {
+            bool nameCheck = true;
+            while (nameCheck)
+            {
+                nameToFill = Console.ReadLine();
+                bool testBool = checkName(nameToFill);
+                if (testBool)
+                {
+                    nameCheck = false;
+                }
+                else
+                {
+                    Console.WriteLine("No record with that name, please try again: ");
+                }
+
+            }
+            //Add the ability to display player list in this section if the user enteres # or smth
+        }
+
+        static void getMapName(string nameToFill)
+        {
+            bool nameCheck = true;
+            while (nameCheck)
+            {
+                nameToFill = Console.ReadLine();
+                bool testBool = checkMap(nameToFill);
+                if (testBool)
+                {
+                    nameCheck = false;
+                }
+                else
+                {
+                    Console.WriteLine("No record with that name, please try again: ");
+                }
+
+            }
+            //Add the ability to display map list in this section if the user enteres ' or smth
+        }
+
+        static void instansiateStatsArray(playerStats[] instAll)
+        {
+            instAll[0] = new playerStats();
+            instAll[1] = new playerStats();
+            instAll[2] = new playerStats();
+            instAll[3] = new playerStats();
+            instAll[4] = new playerStats();
+            instAll[5] = new playerStats();
+            instAll[6] = new playerStats();
+            instAll[7] = new playerStats();
+        }
+        //End Checks --------------------------------------------------------
+
+        //Information gathering
+        static void grabPlayers()
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                bool nameCheck = true;
+                Console.WriteLine("Please enter next player: ");
+                while (nameCheck)
+                {
+                    string tempName = Console.ReadLine();
+                    bool testBool = checkName(tempName);
+                    if (testBool)
+                    {
+                        nameCheck = false;
+                        playersInGameL.Add(heldPlayerStats.Find(x => x.playerName == tempName));
+                    }
+                    else
+                    {
+                        Console.WriteLine("No record with that name, please try again: ");
+                    }
+                }
+            }
+        }
+        static void grabPlayerStats()
+        {
+            using (SqlConnection eloCon = new SqlConnection(conStr))
+            {
+                string queryStr = "Select * FROM PlayerStats";
+                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
+
+                eloCon.Open();
+                using (SqlDataReader oReader = cmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        playerStats tempStats = new playerStats(Convert.ToString(oReader[1]), Convert.ToInt32(oReader[2]), 0.0);
+                        heldPlayerStats.Add(tempStats);
+                    }
+                }
+            }
+            instansiateStatsArray(playersInGame);
+        }
+
+        static void calculateAndSetVolatility(playerStats player)
+        {
+            int gamesPlayed = player.matchesPlayed;
+            player.volatility = 1.25 * (1 / (0.2 * Convert.ToDouble(gamesPlayed) + 1)) + 0.3;
+        }
+        static void grabMapStats()
+        {
+            using (SqlConnection eloCon = new SqlConnection(conStr))
+            {
+                string queryStr = "Select * FROM Maps";
+                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
+
+                eloCon.Open();
+                using (SqlDataReader oReader = cmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        map tempMap = new map(Convert.ToString(oReader[1]), Convert.ToInt32(oReader[2]));
+                        heldMaps.Add(tempMap);
+                    }
+                }
+            }
+        }
+
+        static void grabPreviousMatchStats()
+        {
+            using (SqlConnection eloCon = new SqlConnection(conStr))
+            {
+                string queryStr = "Select * FROM MatchResults WHERE DateOfMatch >= DATEADD(M, -3, GETDATE()) ";
+                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
+
+                eloCon.Open();
+                using (SqlDataReader oReader = cmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        matchResults tempMatch = new matchResults();
+                        tempMatch = tempMatch.matchResultsTeamInput(Convert.ToString(oReader[1]), team1, team2, Convert.ToInt32(oReader[3]),
+                                Convert.ToInt32(oReader[4]), Convert.ToDateTime(oReader[5]));
+                        matchResultsPrev.Add(tempMatch);
+                    }
+                }
+            }
+        }
+        static void findMatchesPlayed(playerStats player)
+        {
+            using (SqlConnection eloCon = new SqlConnection(conStr))
+            {
+                string queryStr = "Select COUNT(idMatchResults) FROM MatchResults WHERE DateOfMatch >= DATEADD(M, -3, GETDATE()) AND" +
+                    "(team1player1 = '" + player.playerName + "' OR " +
+                    "team1player2 = '" + player.playerName + "' OR " +
+                    "team1player3 = '" + player.playerName + "' OR " +
+                    "team1player4 = '" + player.playerName + "' OR " +
+                    "team2player1 = '" + player.playerName + "' OR " +
+                    "team2player2 = '" + player.playerName + "' OR " +
+                    "team2player3 = '" + player.playerName + "' OR " +
+                    "team2player4 = '" + player.playerName + "')";
+                SqlCommand cmd = new SqlCommand(queryStr, eloCon);
+
+                eloCon.Open();
+                using (SqlDataReader oReader = cmd.ExecuteReader())
+                {
+                    while (oReader.Read())
+                    {
+                        player.matchesPlayed = Convert.ToInt32(oReader[0]);
+                    }
+                }
+            }
+        }
+        //End Info Gathering
     }
 }
 

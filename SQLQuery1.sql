@@ -1,0 +1,1 @@
+﻿SELECT * FROM PlayerStats ORDER BY PlayerElo DESC

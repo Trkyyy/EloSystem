@@ -4,4 +4,16 @@ DeadAir,Aron,Rein,Luke,Thomas,Jack,Adam,Moss,Alex,5,0
 DeathToll,Rein,Moss,Aaron,Aron,Luke,Adam,Alex,Koen,4,1
 DeadAir,Luke,Rein,Koen,Luddow,Jack,Niels,Tom,Thomas,3.5,1.5
 BloodHarvest,Rein,Luke,Bradley,Adam,Thomas,Moss,Aaron,Alex,2.5,2.5
-SwampFever,Rein,Wessel,Jack,Adam,Luke,Wessel,Moss,Adam,1,3
+BloodHarvest,Rein,Adam,Bradley,Tom,Luke,Moss,Thomas,Jefta,5,0
+DeathToll,Marlon,Luddow,Rein,Moss,Luke,Tom,Thomas,Jack,1,2
+HardRain,Alex,Moss,Rein,Hoek,Luke,Adam,Rachel,Jack,3,1
+NoMercy,Rein,Luke,Moss,Rachel,Adam,Thomas,Koen,Niels,3,2
+DeadAir,Rein,Alves,Alex,Moss,Garrett,Gallagher,Luke,Jack,4,0
+Parish,Gallagher,Jack,Luddow,Rein,Luke,Garrett,Alves,Alex,3,1
+SwampFever,Rein,Rik,Luke,Rachel,Alves,Aaron,Jack,Alex,3,1
+DeadCenter,Luke,Aaron,Alex,Rik,Rein,Jack,Rachel,Alves,3,1
+NoMercy,Rein,Luke,Garrett,Bradley,Aron,Rik,Adam,Tom,2,2
+BloodHarvest,Rein,Luke,Alves,Rachel,Tom,Garrett,Rik,Luddow,2,3
+Diescraper,Rein,Alex,Jack,Tom,Luke,Rik,Bradley,Garrett,3,1
+BloodHarvest,Rein,Luke,Luddow,Garrett,Alex,Moss,Gallagher,Hoek,3,1
+DeadAir,Luke,Ruben,Thomas,Moss,Rein,Jack,Niels,Rachel,4,0

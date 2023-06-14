@@ -47,6 +47,11 @@ namespace EloSystem
             return found;
         }
 
+        public bool sameTeam(team teamToCheck)
+        {
+            return teamToCheck.findPlayer(player1) && teamToCheck.findPlayer(player2) && teamToCheck.findPlayer(player3) && teamToCheck.findPlayer(player4);
+        }
+
         public double calculateTeamEloAvg()
         {
             double teamElo = 0;
